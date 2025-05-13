@@ -87,6 +87,7 @@
 #include "shell/browser/electron_plugin_info_host_impl.h"
 #include "shell/browser/electron_speech_recognition_manager_delegate.h"
 #include "shell/browser/electron_web_contents_utility_handler_impl.h"
+#include "shell/browser/electron_web_contents_view_delegate_views_mac.h"
 #include "shell/browser/font_defaults.h"
 #include "shell/browser/hid/electron_hid_delegate.h"
 #include "shell/browser/javascript_environment.h"
@@ -140,10 +141,14 @@
 #include "net/ssl/client_cert_store.h"
 #endif
 
-#if BUILDFLAG(ENABLE_BUILTIN_SPELLCHECKER)
+#if BUILDFLAG(ENABLE_SPELLCHECK) || BUILDFLAG(ENABLE_BUILTIN_SPELLCHECKER)
 #include "chrome/browser/spellchecker/spell_check_host_chrome_impl.h"  // nogncheck
 #include "chrome/browser/spellchecker/spell_check_initialization_host_impl.h"  // nogncheck
 #include "components/spellcheck/common/spellcheck.mojom.h"  // nogncheck
+#endif
+
+#if BUILDFLAG(HAS_SPELLCHECK_PANEL)
+#include "chrome/browser/spellchecker/spell_check_panel_host_impl.h"
 #endif
 
 #if BUILDFLAG(OVERRIDE_LOCATION_PROVIDER)
@@ -1566,7 +1571,7 @@ bool ElectronBrowserClient::ShouldEnableStrictSiteIsolation() {
 void ElectronBrowserClient::BindHostReceiverForRenderer(
     content::RenderProcessHost* render_process_host,
     mojo::GenericPendingReceiver receiver) {
-#if BUILDFLAG(ENABLE_BUILTIN_SPELLCHECKER)
+#if BUILDFLAG(ENABLE_SPELLCHECK) || BUILDFLAG(ENABLE_BUILTIN_SPELLCHECKER)
   if (auto host_receiver =
           receiver.As<spellcheck::mojom::SpellCheckInitializationHost>()) {
     SpellCheckInitializationHostImpl::Create(
@@ -1574,7 +1579,23 @@ void ElectronBrowserClient::BindHostReceiverForRenderer(
     return;
   }
 #endif
+#if BUILDFLAG(HAS_SPELLCHECK_PANEL)
+  if (auto host_receiver =
+          receiver.As<spellcheck::mojom::SpellCheckPanelHost>()) {
+    SpellCheckPanelHostImpl::Create(render_process_host->GetDeprecatedID(),
+                                    std::move(host_receiver));
+    return;
+  }
+#endif
 }
+
+#if BUILDFLAG(IS_MAC) && BUILDFLAG(ENABLE_SPELLCHECK)
+std::unique_ptr<content::WebContentsViewDelegate>
+ElectronBrowserClient::GetWebContentsViewDelegate(
+    content::WebContents* web_contents) {
+      return CreateWebContentsViewDelegate(web_contents);
+}
+#endif
 
 #if BUILDFLAG(ENABLE_ELECTRON_EXTENSIONS)
 namespace {
@@ -1629,7 +1650,7 @@ void ElectronBrowserClient::RegisterBrowserInterfaceBindersForFrame(
       base::BindRepeating(&badging::BadgeManager::BindFrameReceiver));
   map->Add<blink::mojom::KeyboardLockService>(base::BindRepeating(
       &content::KeyboardLockServiceImpl::CreateMojoService));
-#if BUILDFLAG(ENABLE_BUILTIN_SPELLCHECKER)
+#if BUILDFLAG(ENABLE_SPELLCHECK) || BUILDFLAG(ENABLE_BUILTIN_SPELLCHECKER)
   map->Add<spellcheck::mojom::SpellCheckHost>(base::BindRepeating(
       [](content::RenderFrameHost* frame_host,
          mojo::PendingReceiver<spellcheck::mojom::SpellCheckHost> receiver) {

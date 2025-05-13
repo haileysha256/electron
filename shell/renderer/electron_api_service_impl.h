@@ -45,6 +45,8 @@ class ElectronApiServiceImpl : public mojom::ElectronRenderer,
     return weak_factory_.GetWeakPtr();
   }
 
+  service_manager::BinderRegistry* registry() { return &registry_; }
+
   void OnInterfaceRequestForFrame(
       const std::string& interface_name,
       mojo::ScopedMessagePipeHandle* interface_pipe) override;
