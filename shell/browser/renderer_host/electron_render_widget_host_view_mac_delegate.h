@@ -17,9 +17,6 @@ class RenderWidgetHost;
 
 - (instancetype)initWithRenderWidgetHost:
     (content::RenderWidgetHost*)renderWidgetHost;
-
-- (BOOL)validateUserInterfaceItem:(id<NSValidatedUserInterfaceItem>)item
-                      isValidItem:(BOOL*)valid;
 @end
 
 #endif  // ELECTRON_BROWSER_RENDERER_HOST_CHROME_RENDER_WIDGET_HOST_VIEW_MAC_DELEGATE_H_

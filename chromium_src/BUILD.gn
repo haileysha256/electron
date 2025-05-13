@@ -435,13 +435,6 @@ source_set("chrome_spellchecker") {
   deps = []
   libs = []
   public_deps = []
-  
-  if (enable_spellchecker) && (is_mac) {
-    sources += [
-      "//chrome/browser/profiles/profile.h",
-      "//chrome/browser/profiles/profile.cc",
-    ]
-  }
 
   if (enable_builtin_spellchecker) {
     sources += [
