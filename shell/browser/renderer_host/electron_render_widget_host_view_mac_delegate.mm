@@ -5,17 +5,11 @@
 #import "shell/browser/renderer_host/electron_render_widget_host_view_mac_delegate.h"
 
 #include "base/strings/sys_string_conversions.h"
-#include "chrome/browser/profiles/profile.h"
-#include "components/prefs/pref_service.h"
-#include "components/spellcheck/browser/pref_names.h"
 #include "components/spellcheck/browser/spellcheck_platform.h"
 #include "components/spellcheck/common/spellcheck_panel.mojom.h"
-#include "content/public/browser/preloading.h"
-#include "content/public/browser/render_frame_host.h"
 #include "content/public/browser/render_process_host.h"
 #include "content/public/browser/render_view_host.h"
 #include "content/public/browser/render_widget_host.h"
-#include "content/public/browser/render_widget_host_view.h"
 #include "content/public/browser/web_contents.h"
 #include "mojo/public/cpp/bindings/remote.h"
 #include "services/service_manager/public/cpp/interface_provider.h"
@@ -23,7 +17,6 @@
 @interface ElectronRenderWidgetHostViewMacDelegate ()
 
 @property(readonly) content::WebContents* webContents;
-@property(readonly) PrefService* prefService;
 @end
 
 @implementation ElectronRenderWidgetHostViewMacDelegate {
@@ -71,51 +64,6 @@
 - (void)rendererHandledWheelEvent:(const blink::WebMouseWheelEvent&)event
                          consumed:(BOOL)consumed {}
 
-- (BOOL)validateUserInterfaceItem:(id<NSValidatedUserInterfaceItem>)item
-                      isValidItem:(BOOL*)valid {
-  PrefService* pref = self.prefService;
-  if (!pref) {
-    return NO;
-  }
-
-  const PrefService::Preference* spellCheckEnablePreference =
-      pref->FindPreference(spellcheck::prefs::kSpellCheckEnable);
-  DCHECK(spellCheckEnablePreference);
-  const bool spellCheckUserModifiable =
-      spellCheckEnablePreference->IsUserModifiable();
-
-  SEL action = item.action;
-  // For now, this action is always enabled for render view;
-  // this is sub-optimal.
-  // TODO(suzhe): Plumb the "can*" methods up from WebCore.
-  if (action == @selector(checkSpelling:)) {
-    *valid = spellCheckUserModifiable;
-    return YES;
-  }
-
-  // TODO(groby): Clarify who sends this and if toggleContinuousSpellChecking:
-  // is still necessary.
-  if (action == @selector(toggleContinuousSpellChecking:)) {
-    if ([(id)item respondsToSelector:@selector(setState:)]) {
-      NSControlStateValue checkedState =
-          pref->GetBoolean(spellcheck::prefs::kSpellCheckEnable)
-              ? NSControlStateValueOn
-              : NSControlStateValueOff;
-      [(id)item setState:checkedState];
-    }
-    *valid = spellCheckUserModifiable;
-    return YES;
-  }
-
-  if (action == @selector(showGuessPanel:) ||
-      action == @selector(toggleGrammarChecking:)) {
-    *valid = spellCheckUserModifiable;
-    return YES;
-  }
-
-  return NO;
-}
-
 - (content::WebContents*)webContents {
   content::RenderWidgetHost* renderWidgetHost =
       content::RenderWidgetHost::FromID(_widgetProcessId, _widgetRoutingId);
@@ -130,18 +78,6 @@
   }
 
   return content::WebContents::FromRenderViewHost(renderViewHost);
-}
-
-- (PrefService*)prefService {
-  content::RenderWidgetHost* renderWidgetHost =
-      content::RenderWidgetHost::FromID(_widgetProcessId, _widgetRoutingId);
-  if (!renderWidgetHost) {
-    return nullptr;
-  }
-
-  return Profile::FromBrowserContext(
-             renderWidgetHost->GetProcess()->GetBrowserContext())
-      ->GetPrefs();
 }
 
 // Spellchecking methods
@@ -215,14 +151,7 @@
   }
 }
 
-- (void)toggleContinuousSpellChecking:(id)sender {
-  PrefService* pref = self.prefService;
-  if (!pref) {
-    return;
-  }
-  pref->SetBoolean(spellcheck::prefs::kSpellCheckEnable,
-                   !pref->GetBoolean(spellcheck::prefs::kSpellCheckEnable));
-}
+
 
 // END Spellchecking methods
 
