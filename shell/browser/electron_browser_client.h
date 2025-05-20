@@ -33,6 +33,7 @@ class ClientCertificateDelegate;
 class PlatformNotificationService;
 class NavigationThrottleRegistry;
 class QuotaPermissionContext;
+class WebContentsViewDelegate;
 }  // namespace content
 
 namespace net {
@@ -121,6 +122,8 @@ class ElectronBrowserClient : public content::ContentBrowserClient,
 #if BUILDFLAG(IS_MAC)
   device::GeolocationSystemPermissionManager*
   GetGeolocationSystemPermissionManager() override;
+                        
+  std::unique_ptr<content::WebContentsViewDelegate> GetWebContentsViewDelegate(content::WebContents* web_contents) override;
 #endif
 
   content::PlatformNotificationService* GetPlatformNotificationService();
